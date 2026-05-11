@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Review Story</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 960px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 { color: #0052cc; }
+        h2 {
+            color: #0052cc;
+            border-bottom: 2px solid #0052cc;
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+        h3 { color: #333; margin: 16px 0 6px 0; }
+        .section {
+            background: white;
+            padding: 24px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        input[type="text"], textarea, select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 4px;
+            font-family: Arial, sans-serif;
+        }
+        textarea { resize: vertical; min-height: 70px; }
+        label { font-weight: bold; color: #555; font-size: 13px; }
+
+        /* List rows (scope, AC, out of scope etc) */
+        .list-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            align-items: center;
+        }
+        .list-row input { flex: 1; margin-top: 0; }
+
+        /* Test case card */
+        .test-case {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            background: #fafafa;
+        }
+        .test-case-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .test-case-title {
+            font-weight: bold;
+            font-size: 15px;
+            color: #333;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .badge-positive { background: #e3fcef; color: #006644; }
+        .badge-negative { background: #ffebe6; color: #bf2600; }
+        .badge-edge     { background: #fff0b3; color: #ff8b00; }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 22px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-right: 8px;
+        }
+        .btn-approve  { background: #0052cc; color: white; font-size: 16px; padding: 12px 30px; }
+        .btn-approve:hover { background: #0041a3; }
+        .btn-reject   { background: #de350b; color: white; }
+        .btn-reject:hover  { background: #bf2600; }
+        .btn-add-small { background: #e3fcef; color: #006644; border: 1px solid #006644; padding: 6px 14px; font-size: 13px; }
+        .btn-remove   { background: #ffebe6; color: #de350b; border: 1px solid #de350b; padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+        .btn-add-tc   { background: #0052cc; color: white; width: 100%; padding: 12px; font-size: 15px; border-radius: 6px; cursor: pointer; border: none; margin-bottom: 16px; }
+
+        /* Coverage banner */
+        .coverage {
+            background: #e3fcef;
+            padding: 12px 16px;
+            border-radius: 6px;
+            color: #006644;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        /* Action bar */
+        .action-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+
+<h1>🤖 AI Story Generator — Review & Edit</h1>
+<p style="color:#666; margin-bottom:24px;">
+    Review and edit the generated story and test cases. When ready, click <strong>Approve & Send to Jira</strong>.
+</p>
+
+<form action="/approve" method="POST" id="main-form">
+
+    <!-- ==================== USER STORY ==================== -->
+    <div class="section">
+        <h2>📋 User Story</h2>
+
+        <h3>Summary</h3>
+        <input type="text" name="summary" value="{{ story.summary }}">
+
+        <h3>Description</h3>
+        <textarea name="description" rows="3">{{ story.description }}</textarea>
+
+        <h3>Business Context</h3>
+        <textarea name="business_context" rows="3">{{ story.business_context }}</textarea>
+
+        <h3>Scope</h3>
+        <div id="scope-list">
+            {% for item in story.scope %}
+            <div class="list-row">
+                <input type="text" name="scope" value="{{ item }}">
+                <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-add-small"
+                onclick="addRow('scope-list', 'scope')">+ Add Scope Item</button>
+
+        <h3>Acceptance Criteria</h3>
+        <div id="ac-list">
+            {% for ac in story.acceptance_criteria %}
+            <div class="list-row">
+                <input type="text" name="ac_id"
+                       value="{{ ac.id }}"
+                       style="width:70px; flex:none;">
+                <input type="text" name="ac_text" value="{{ ac.text }}">
+                <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-add-small"
+                onclick="addAC()">+ Add AC</button>
+
+        <h3>Out of Scope</h3>
+        <div id="oos-list">
+            {% for item in story.out_of_scope %}
+            <div class="list-row">
+                <input type="text" name="out_of_scope" value="{{ item }}">
+                <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-add-small"
+                onclick="addRow('oos-list', 'out_of_scope')">+ Add Item</button>
+
+        <h3>Dependencies / Assumptions</h3>
+        <div id="dep-list">
+            {% for item in story.dependencies %}
+            <div class="list-row">
+                <input type="text" name="dependencies" value="{{ item }}">
+                <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-add-small"
+                onclick="addRow('dep-list', 'dependencies')">+ Add Dependency</button>
+    </div>
+
+    <!-- ==================== TEST COVERAGE ==================== -->
+    <div class="section">
+        <div class="coverage">✅ {{ test_coverage }}</div>
+    </div>
+
+    <!-- ==================== TEST CASES ==================== -->
+    <div class="section">
+        <h2>🧪 Test Cases</h2>
+
+        <div id="test-cases-container">
+            {% for tc in test_cases %}
+            <div class="test-case" id="tc-{{ loop.index }}">
+                <div class="test-case-header">
+                    <span class="test-case-title">Test Case {{ loop.index }}</span>
+                    <button type="button" class="btn-remove"
+                            onclick="removeTestCase(this)">🗑 Delete</button>
+                </div>
+
+                <label>Test Case Name</label>
+                <input type="text" name="tc_name" value="{{ tc.name }}">
+
+                <label style="margin-top:10px; display:block;">Test Type</label>
+                <select name="tc_type">
+                    <option {% if tc.test_type == 'Positive' %}selected{% endif %}>Positive</option>
+                    <option {% if tc.test_type == 'Negative' %}selected{% endif %}>Negative</option>
+                    <option {% if tc.test_type == 'Edge Case' %}selected{% endif %}>Edge Case</option>
+                </select>
+
+                <label style="margin-top:10px; display:block;">Related AC</label>
+                <input type="text" name="tc_ac" value="{{ tc.related_ac }}"
+                       style="max-width:120px;">
+
+                <label style="margin-top:10px; display:block;">
+                    Preconditions <span style="font-weight:normal;">(one per line)</span>
+                </label>
+                <textarea name="tc_preconditions">{{ tc.preconditions | join('\n') }}</textarea>
+
+                <label style="margin-top:10px; display:block;">
+                    Test Steps <span style="font-weight:normal;">(one per line)</span>
+                </label>
+                <textarea name="tc_steps">{{ tc.steps | join('\n') }}</textarea>
+
+                <label style="margin-top:10px; display:block;">
+                    Expected Result <span style="font-weight:normal;">(one per line)</span>
+                </label>
+                <textarea name="tc_expected">{{ tc.expected_result | join('\n') }}</textarea>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Add Test Case Button -->
+        <button type="button" class="btn-add-tc" onclick="addTestCase()">
+            ＋ Add New Test Case
+        </button>
+    </div>
+
+    <!-- ==================== ACTION BUTTONS ==================== -->
+    <div class="section">
+        <div class="action-bar">
+            <button type="submit" class="btn btn-approve">
+                ✅ Approve & Send to Jira
+            </button>
+            <button type="button" class="btn btn-reject" onclick="rejectStory()">
+                ❌ Reject & Start Over
+            </button>
+        </div>
+    </div>
+
+</form>
+
+<!-- ==================== JAVASCRIPT ==================== -->
+<script>
+    // Remove any list row (scope item, AC, dependency etc)
+    function removeRow(btn) {
+        btn.parentElement.remove();
+    }
+
+    // Remove a whole test case card
+    function removeTestCase(btn) {
+        if (confirm("Delete this test case?")) {
+            btn.closest(".test-case").remove();
+        }
+    }
+
+    // Add a simple single-input list row
+    function addRow(containerId, fieldName) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement("div");
+        row.className = "list-row";
+        row.innerHTML = `
+            <input type="text" name="${fieldName}" placeholder="Enter value...">
+            <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+        `;
+        container.appendChild(row);
+        row.querySelector("input").focus();
+    }
+
+    // Add a new AC row (two inputs: ID + text)
+    function addAC() {
+        const container = document.getElementById("ac-list");
+        const count = container.querySelectorAll(".list-row").length + 1;
+        const row = document.createElement("div");
+        row.className = "list-row";
+        row.innerHTML = `
+            <input type="text" name="ac_id"
+                   value="AC${count}"
+                   style="width:70px; flex:none;">
+            <input type="text" name="ac_text" placeholder="Acceptance criterion...">
+            <button type="button" class="btn-remove" onclick="removeRow(this)">✕</button>
+        `;
+        container.appendChild(row);
+        row.querySelectorAll("input")[1].focus();
+    }
+
+    // Add a blank new test case card
+    function addTestCase() {
+        const container = document.getElementById("test-cases-container");
+        const count = container.querySelectorAll(".test-case").length + 1;
+        const card = document.createElement("div");
+        card.className = "test-case";
+        card.innerHTML = `
+            <div class="test-case-header">
+                <span class="test-case-title">Test Case ${count}</span>
+                <button type="button" class="btn-remove"
+                        onclick="removeTestCase(this)">🗑 Delete</button>
+            </div>
+            <label>Test Case Name</label>
+            <input type="text" name="tc_name" placeholder="Test case name...">
+
+            <label style="margin-top:10px; display:block;">Test Type</label>
+            <select name="tc_type">
+                <option>Positive</option>
+                <option>Negative</option>
+                <option>Edge Case</option>
+            </select>
+
+            <label style="margin-top:10px; display:block;">Related AC</label>
+            <input type="text" name="tc_ac" value="AC1" style="max-width:120px;">
+
+            <label style="margin-top:10px; display:block;">
+                Preconditions <span style="font-weight:normal;">(one per line)</span>
+            </label>
+            <textarea name="tc_preconditions" placeholder="One precondition per line..."></textarea>
+
+            <label style="margin-top:10px; display:block;">
+                Test Steps <span style="font-weight:normal;">(one per line)</span>
+            </label>
+            <textarea name="tc_steps" placeholder="1. Step one&#10;2. Step two..."></textarea>
+
+            <label style="margin-top:10px; display:block;">
+                Expected Result <span style="font-weight:normal;">(one per line)</span>
+            </label>
+            <textarea name="tc_expected" placeholder="One expected result per line..."></textarea>
+        `;
+        container.appendChild(card);
+        card.querySelector("input").focus();
+        card.scrollIntoView({ behavior: "smooth" });
+    }
+
+    // Reject — confirm then go back to home
+    function rejectStory() {
+        if (confirm("Reject this story and start over?")) {
+            window.location.href = "/";
+        }
+    }
+</script>
+
+</body>
+</html>

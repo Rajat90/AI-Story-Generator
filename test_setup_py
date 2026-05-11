@@ -1,0 +1,8 @@
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+print("Anthropic Key:", os.getenv("ANTHROPIC_API_KEY")[:10] + "...")
+print("Jira URL:", os.getenv("JIRA_URL"))
+print("✅ Setup complete!")

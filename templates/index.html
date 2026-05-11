@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Story Generator</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 60px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 { color: #0052cc; margin-bottom: 4px; }
+        .subtitle { color: #666; margin-bottom: 28px; font-size: 15px; }
+
+        /* Flash messages */
+        .flash-error {
+            background: #ffebe6;
+            border: 1px solid #de350b;
+            color: #bf2600;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Form card */
+        .card {
+            background: white;
+            padding: 28px;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+        }
+        label {
+            font-weight: bold;
+            color: #333;
+            font-size: 15px;
+        }
+        .label-hint {
+            font-weight: normal;
+            color: #888;
+            font-size: 13px;
+            margin-left: 6px;
+        }
+        textarea {
+            width: 100%;
+            height: 160px;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            resize: vertical;
+            margin-top: 10px;
+            font-family: Arial, sans-serif;
+            transition: border-color 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #0052cc;
+            box-shadow: 0 0 0 2px rgba(0,82,204,0.15);
+        }
+        textarea.over-limit { border-color: #de350b; }
+
+        /* Character counter */
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .char-counter.over { color: #de350b; font-weight: bold; }
+
+        /* Examples */
+        .examples {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #666;
+        }
+        .example-chip {
+            display: inline-block;
+            background: #f0f5ff;
+            color: #0052cc;
+            border: 1px solid #b3d0ff;
+            border-radius: 12px;
+            padding: 4px 12px;
+            margin: 4px 4px 4px 0;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.15s;
+        }
+        .example-chip:hover { background: #d6e8ff; }
+
+        /* Button */
+        .btn-generate {
+            margin-top: 16px;
+            width: 100%;
+            padding: 14px;
+            background-color: #0052cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-generate:hover:not(:disabled) { background-color: #0041a3; }
+        .btn-generate:disabled {
+            background-color: #aac4e8;
+            cursor: not-allowed;
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255,255,255,0.92);
+            z-index: 999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .loading-overlay.active { display: flex; }
+        .spinner {
+            width: 52px; height: 52px;
+            border: 5px solid #e0e0e0;
+            border-top-color: #0052cc;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            font-size: 18px;
+            color: #0052cc;
+            font-weight: bold;
+        }
+        .loading-sub {
+            font-size: 14px;
+            color: #888;
+            margin-top: -12px;
+        }
+
+        /* Tips */
+        .tips {
+            margin-top: 20px;
+            font-size: 13px;
+            color: #888;
+            line-height: 1.6;
+        }
+        .tips strong { color: #555; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay — shown while Claude is thinking -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">✨ Claude is generating your story...</div>
+    <div class="loading-sub">This usually takes 5–10 seconds</div>
+</div>
+
+<h1>🤖 AI Story Generator</h1>
+<p class="subtitle">
+    Type your raw feature idea → Claude generates User Story + Test Cases → Upload to Jira
+</p>
+
+<!-- Flash error messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="flash-{{ category }}">
+            ⚠️ {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+<div class="card">
+    <form action="/generate" method="POST" id="storyForm"
+          onsubmit="return handleSubmit()">
+
+        <label for="raw_story">
+            Describe your feature
+            <span class="label-hint">(in plain English — the rougher the better)</span>
+        </label>
+
+        <textarea
+            name="raw_story"
+            id="raw_story"
+            placeholder="Example: Users should be able to reset their password via email link. The link should expire after 24 hours..."
+            maxlength="1000"
+            oninput="updateCounter(this)"
+        ></textarea>
+
+        <div class="char-counter" id="charCounter">0 / 1000</div>
+
+        <!-- Example chips -->
+        <div class="examples">
+            <strong>Try an example:</strong><br>
+            <span class="example-chip"
+                  onclick="fillExample('Users should be able to login with Google SSO')">
+                Google SSO Login
+            </span>
+            <span class="example-chip"
+                  onclick="fillExample('Admin should be able to export reports as PDF or Excel')">
+                Export Reports
+            </span>
+            <span class="example-chip"
+                  onclick="fillExample('System should send email notification when a bot fails in Orchestrator')">
+                Bot Failure Alert
+            </span>
+        </div>
+
+        <button type="submit" class="btn-generate" id="generateBtn">
+            ⚡ Generate Story & Test Cases
+        </button>
+    </form>
+</div>
+
+<div class="tips">
+    <strong>💡 Tips for better results:</strong><br>
+    • Mention WHO uses the feature (user, admin, system)<br>
+    • Mention WHAT the feature does<br>
+    • Mention any key rules or constraints
+</div>
+
+<script>
+    const MAX = 1000;
+
+    function updateCounter(textarea) {
+        const len = textarea.value.length;
+        const counter = document.getElementById("charCounter");
+        counter.textContent = `${len} / ${MAX}`;
+        if (len > MAX * 0.9) {
+            counter.classList.add("over");
+            textarea.classList.add("over-limit");
+        } else {
+            counter.classList.remove("over");
+            textarea.classList.remove("over-limit");
+        }
+    }
+
+    function fillExample(text) {
+        const ta = document.getElementById("raw_story");
+        ta.value = text;
+        updateCounter(ta);
+        ta.focus();
+    }
+
+    function handleSubmit() {
+        const text = document.getElementById("raw_story").value.trim();
+
+        // Client-side validation
+        if (!text) {
+            alert("Please enter a feature description.");
+            return false;
+        }
+        if (text.length < 10) {
+            alert("Description too short. Please provide more detail.");
+            return false;
+        }
+
+        // Show loading overlay
+        document.getElementById("loadingOverlay").classList.add("active");
+        document.getElementById("generateBtn").disabled = true;
+
+        return true; // allow form submit
+    }
+</script>
+
+</body>
+</html>
