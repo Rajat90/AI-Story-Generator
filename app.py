@@ -50,7 +50,7 @@ def generate():
     print(f"\n{'='*50}")
     print(f"New request received ({len(raw_input)} chars)")
     print(f"{'='*50}")
-
+                    
     # ── Claude API call ──────────────────────
     try:
         result = generate_story(raw_input)

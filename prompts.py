@@ -1,6 +1,6 @@
 def get_story_prompt(raw_input: str) -> str:
     return f"""
-You are an expert Business Analyst and QA Engineer.
+You are an expert Business Analyst and QA Engineer.When the input is in German then output should be in German, otherwise output should be in English.
 
 Given this raw feature requirement:
 "{raw_input}"
