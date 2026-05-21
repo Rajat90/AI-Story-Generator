@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, flash
+from flask import Flask, render_template, request, session, flash, redirect, url_for
 import urllib3
 import os
 from dotenv import load_dotenv
@@ -18,13 +18,33 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY", "fallback-secret-key")
 # Input limits
 MAX_INPUT_LENGTH = 1000
 
+def is_authenticated():
+    return session.get("authenticated") == True
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        if password == os.getenv("APP_PASSWORD", "weare12a4champs"):
+            session["authenticated"] = True
+            return redirect(url_for("home"))
+        else:
+            flash("Wrong password. Please try again.", "error")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 # ─────────────────────────────────────────
 # Route 1: Home page
 # ─────────────────────────────────────────
 @app.route("/")
 def home():
-    return render_template("index.html")
+     if not is_authenticated():
+        return redirect(url_for("login"))
+     return render_template("index.html")
 
 
 # ─────────────────────────────────────────
@@ -32,6 +52,8 @@ def home():
 # ─────────────────────────────────────────
 @app.route("/generate", methods=["POST"])
 def generate():
+    if not is_authenticated():
+        return redirect(url_for("login"))
     raw_input = request.form.get("raw_story", "").strip()
 
     # ── Validation ──────────────────────────
@@ -85,6 +107,8 @@ def generate():
 # ─────────────────────────────────────────
 @app.route("/approve", methods=["POST"])
 def approve():
+    if not is_authenticated():
+        return redirect(url_for("login"))
 
     # ── Read story from form ─────────────────
     story = {

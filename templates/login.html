@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>12A4 AI Story Generator — Login</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #0A2342;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .logo { font-size: 48px; margin-bottom: 8px; }
+        h1 { color: #0A2342; font-size: 22px; margin: 0 0 6px 0; }
+        .subtitle { color: #888; font-size: 13px; margin-bottom: 28px; }
+        .flash-error {
+            background: #ffebe6;
+            border: 1px solid #de350b;
+            color: #bf2600;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 15px;
+            text-align: center;
+            letter-spacing: 4px;
+            margin-bottom: 16px;
+        }
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #0052cc;
+            box-shadow: 0 0 0 2px rgba(0,82,204,0.15);
+        }
+        .btn {
+            width: 100%;
+            padding: 13px;
+            background: #0052cc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn:hover { background: #0041a3; }
+        .hint { color: #bbb; font-size: 11px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">🤖</div>
+    <h1>AI Story Generator</h1>
+    <p class="subtitle">Enter password to continue</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-{{ category }}">⚠️ {{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <input type="password" name="password"
+               placeholder="••••••••" required autofocus>
+        <button type="submit" class="btn">🚀 Enter</button>
+    </form>
+
+    <p class="hint">12A4 AI Story Generator — Internal Use Only</p>
+</div>
+</body>
+</html>
